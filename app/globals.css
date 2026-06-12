@@ -1,0 +1,103 @@
+/* Estilos del muro: un solo archivo, diseño simple y limpio */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  background: #f4f4f5;
+  color: #18181b;
+}
+
+.muro {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+h1 {
+  font-size: 2rem;
+}
+
+.subtitulo {
+  color: #71717a;
+  margin-bottom: 1.5rem;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  background: #ffffff;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #e4e4e7;
+}
+
+input,
+textarea {
+  font: inherit;
+  padding: 0.6rem;
+  border: 1px solid #d4d4d8;
+  border-radius: 6px;
+  resize: vertical;
+}
+
+.fila {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.contador {
+  font-size: 0.85rem;
+  color: #71717a;
+}
+
+button {
+  font: inherit;
+  font-weight: 600;
+  color: #ffffff;
+  background: #2563eb;
+  border: none;
+  border-radius: 6px;
+  padding: 0.6rem 1.4rem;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #1d4ed8;
+}
+
+.error {
+  margin-top: 0.8rem;
+  color: #dc2626;
+  font-weight: 500;
+}
+
+.lista {
+  list-style: none;
+  margin-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.lista li {
+  background: #ffffff;
+  border: 1px solid #e4e4e7;
+  border-radius: 8px;
+  padding: 0.9rem 1rem;
+}
+
+.lista p {
+  margin: 0.3rem 0;
+  overflow-wrap: break-word;
+}
+
+.lista small {
+  color: #a1a1aa;
+}

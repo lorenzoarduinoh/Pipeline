@@ -1,0 +1,41 @@
+# Servidor de Integración Continua: GitHub Actions.
+# En cada push o pull request a main, este workflow instala dependencias,
+# corre los tests y hace el build. Si algo falla, GitHub marca el commit
+# con una cruz roja (mecanismo de feedback).
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Descarga el código del repositorio
+      - uses: actions/checkout@v4
+
+      # 2. Instala Node 20 con caché de npm para acelerar las corridas
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # 3. Instala las dependencias exactas del package-lock.json
+      - run: npm ci
+
+      # 4. Corre la prueba automatizada (Vitest)
+      - run: npm run test
+
+      # 5. Hace el build de producción.
+      # Usamos valores "dummy" para las variables de Supabase porque el build
+      # de Next.js necesita que existan para compilar, pero en CI no nos
+      # conectamos a la base de datos real (las credenciales reales solo
+      # viven en Vercel y en el .env.local de cada desarrollador).
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://dummy.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy-anon-key
