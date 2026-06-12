@@ -1,15 +1,17 @@
 # INFORME — Entorno de Integración y Entrega Continua
 
-Proyecto: **El Muro** — muro público de mensajes con pipeline completo de CI/CD.
+Proyecto: **The Wall** — muro público de mensajes y canciones con pipeline
+completo de CI/CD y estética inspirada en el álbum de Pink Floyd.
 
 ---
 
 ## 1. Resumen del proyecto
 
-La aplicación es una página única donde cualquier visitante escribe su nombre y
-un mensaje de hasta 200 caracteres, lo publica con un botón, y ve la lista de
-todos los mensajes ordenados del más reciente al más antiguo (nombre, mensaje y
-fecha).
+La aplicación es una página única donde cualquier visitante escribe su nombre,
+un mensaje de hasta 200 caracteres y, opcionalmente, el link de una canción de
+Spotify; lo publica con un botón y ve la lista de todos los mensajes ordenados
+del más reciente al más antiguo (nombre, mensaje, la canción como reproductor
+de Spotify embebido, y fecha).
 
 **Herramientas**: Next.js (framework web, JavaScript), Supabase (base de datos
 PostgreSQL), Vitest (pruebas), GitHub (repositorio), GitHub Actions (servidor
@@ -32,13 +34,18 @@ de IC) y Vercel (entorno de entrega).
 
 ### `app/page.js` — la página del muro
 Es la única página de la app. Tiene un formulario (nombre + mensaje con
-contador de caracteres restantes) y la lista de mensajes. Cuando apretás
-"Publicar": primero valida con `validarMensaje` (si es inválido muestra el
-error y **no** envía nada), después inserta el mensaje en Supabase, y por
-último vuelve a cargar la lista para que aparezca el mensaje nuevo. Si la carga
-o el insert fallan, muestra un texto de error. Es un *client component*
+contador de caracteres restantes + link opcional de Spotify) y la lista de
+mensajes. Cuando apretás "Publicar": primero valida con `validarMensaje` (si
+es inválido muestra el error y **no** envía nada), después inserta el mensaje
+en Supabase, y por último vuelve a cargar la lista para que aparezca el
+mensaje nuevo. Si un mensaje trae canción, se muestra el reproductor oficial
+embebido de Spotify (un `iframe` con la URL
+`open.spotify.com/embed/track/<id>`; el id se extrae del link guardado). Si la
+carga o el insert fallan, muestra un texto de error. Es un *client component*
 (`'use client'`) porque maneja estado con `useState` y carga datos desde el
-navegador.
+navegador. La estética (pared de ladrillos, tipografía garabateada) vive en
+`app/globals.css`: la pared es un patrón SVG dibujado en CSS, sin imágenes
+externas.
 
 ### `lib/supabase.js` — la conexión a la base de datos
 Crea el "cliente" de Supabase, que es el objeto que sabe hablar con la base de
@@ -49,9 +56,11 @@ regalar acceso, y cada entorno (mi PC, Vercel) usa sus propias credenciales.
 ### `lib/validarMensaje.js` — la regla de negocio
 Una sola función que decide si una publicación es válida: nombre obligatorio y
 de hasta 50 caracteres, mensaje obligatorio y de 1 a 200 caracteres (siempre
-recortando espacios al inicio/fin). Devuelve `{ valido: true }` o
-`{ valido: false, error: "..." }`. **No la escribí "de cero": se generó a
-partir de la spec** `specs/validacion-mensaje.md` (ver sección 4).
+recortando espacios al inicio/fin), y canción opcional que, si se incluye,
+debe ser un link de Spotify (`open.spotify.com/.../track/...`). Devuelve
+`{ valido: true }` o `{ valido: false, error: "..." }`. **No la escribí "de
+cero": se generó a partir de la spec** `specs/validacion-mensaje.md`
+(ver sección 4).
 
 ### `lib/validarMensaje.test.js` — la prueba automatizada
 Tests de Vitest que verifican cada caso de la sección "Casos de prueba
@@ -142,12 +151,22 @@ y el CI verifica automáticamente que el código nuevo cumple los casos de
 prueba nuevos. La spec funciona como contrato verificable entre el negocio y
 el código.
 
+**Y no es solo teoría: en este proyecto pasó de verdad.** La regla de la
+canción de Spotify (regla 5 de la spec) no existía en la primera versión: se
+agregó después, siguiendo exactamente ese flujo — primero se modificó la spec
+(nueva regla + tres casos de prueba nuevos), y de ella se regeneraron la
+función y los tests (que pasaron de 6 a 9). La propia spec deja constancia en
+su "nota histórica". Es la demostración práctica de que el ciclo
+spec → código → tests funciona cuando el negocio cambia.
+
 ---
 
 ## 5. Pasos manuales que te quedan
 
 - [ ] **a)** Crear un proyecto en https://supabase.com (gratis), entrar a
   **SQL Editor**, pegar el contenido de `supabase/setup.sql` y ejecutarlo (Run).
+  *Si ya habías creado la tabla con la versión anterior del setup (sin la
+  columna de la canción), ejecutá en cambio `supabase/migracion-cancion.sql`.*
 - [ ] **b)** Copiar `.env.local.example` como `.env.local` y completar las dos
   variables con los valores de **Settings → API** de tu proyecto Supabase.
   Verificar con `npm run dev` que podés publicar y ver mensajes.

@@ -1,8 +1,10 @@
-# El Muro 🧱
+# The Wall 🧱
 
-Aplicación de muro de mensajes construida para demostrar un entorno completo de
-**Integración y Entrega Continua**. Cualquier visitante puede publicar un mensaje
-(nombre + texto de hasta 200 caracteres) y ver todos los mensajes publicados,
+Muro de mensajes y canciones con estética inspirada en *The Wall* de Pink
+Floyd, construido para demostrar un entorno completo de **Integración y
+Entrega Continua**. Cualquier visitante puede publicar un mensaje (nombre +
+texto de hasta 200 caracteres + opcionalmente el link de una canción de
+Spotify, que se muestra como reproductor) y ver todos los mensajes publicados,
 del más reciente al más antiguo.
 
 **Stack**: Next.js (JavaScript) · Supabase (base de datos) · Vitest (tests) ·

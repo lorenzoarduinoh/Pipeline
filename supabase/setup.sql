@@ -6,6 +6,7 @@ create table mensajes (
   id uuid primary key default gen_random_uuid(), -- identificador único autogenerado
   nombre text not null,                          -- nombre de quien publica
   mensaje varchar(200) not null,                 -- el mensaje (máximo 200 caracteres)
+  cancion text,                                  -- link opcional a una canción de Spotify
   created_at timestamptz default now()           -- fecha y hora de publicación
 );
 
