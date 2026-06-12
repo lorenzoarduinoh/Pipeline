@@ -16,10 +16,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # 1. Descarga el código del repositorio
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # 2. Instala Node 20 con caché de npm para acelerar las corridas
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
           cache: npm
