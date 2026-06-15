@@ -4,7 +4,7 @@
 > validación. El código (`lib/validarMensaje.js`) y los tests
 > (`lib/validarMensaje.test.js`) se generan a partir de este documento.
 > Si una regla de negocio cambia, primero se modifica esta spec y después
-> se regeneran el código y los tests (Spec Driven Development).
+> se regeneran el código y los tests 
 
 ## Función a implementar
 
@@ -52,6 +52,4 @@ canción de Spotify) y decide si la publicación es válida.
 9. **Canción con un link que no es de Spotify**: por ejemplo un link de
    YouTube, debe ser inválido, con un error que mencione Spotify.
 
-> Nota histórica: la regla 5 (canción de Spotify) se agregó después de la
-> primera versión, siguiendo el flujo de Spec Driven Development: primero se
-> modificó esta spec y a partir de ella se regeneraron el código y los tests.
+
