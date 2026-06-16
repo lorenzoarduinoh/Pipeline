@@ -1,7 +1,7 @@
 # Servidor de Integración Continua: GitHub Actions.
-# En cada push o pull request a main, este workflow instala dependencias,
-# corre los tests y hace el build. Si algo falla, GitHub marca el commit
-# con una cruz roja (mecanismo de feedback).
+# Pipeline en etapas: lint y test corren en paralelo; si ambos pasan, se hace
+# el build. El job final "ci" es la compuerta (gate) que resume todo: es el
+# check obligatorio que la branch protection de main exige para poder mergear.
 
 name: CI
 
@@ -12,30 +12,85 @@ on:
     branches: [main]
 
 jobs:
-  ci:
+  # ------------------------------------------------------------------
+  # ETAPA 1a: LINT — inspección estática del código con ESLint
+  # ------------------------------------------------------------------
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
     steps:
-      # 1. Descarga el código del repositorio
       - uses: actions/checkout@v5
-
-      # 2. Instala Node 20 con caché de npm para acelerar las corridas
       - uses: actions/setup-node@v5
         with:
           node-version: 20
           cache: npm
-
-      # 3. Instala las dependencias exactas del package-lock.json
       - run: npm ci
+      - name: Inspección de código (ESLint)
+        run: npm run lint
 
-      # 4. Corre la prueba automatizada (Vitest)
-      - run: npm run test
+  # ------------------------------------------------------------------
+  # ETAPA 1b: TEST — pruebas automatizadas (Vitest) con cobertura
+  # ------------------------------------------------------------------
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Pruebas con cobertura (Vitest)
+        run: npm run test:coverage
+      - name: Subir reporte de cobertura como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
 
-      # 5. Hace el build de producción.
-      # Usamos valores "dummy" para las variables de Supabase porque el build
-      # de Next.js necesita que existan para compilar, pero en CI no nos
-      # conectamos a la base de datos real (las credenciales reales solo
-      # viven en Vercel y en el .env.local de cada desarrollador).
-      - run: npm run build
+  # ------------------------------------------------------------------
+  # ETAPA 2: BUILD — compila la app de producción (solo si lint y test pasan)
+  # ------------------------------------------------------------------
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Build de producción
+        # Valores "dummy" para Supabase: el build de Next los necesita para
+        # compilar, pero el CI no se conecta a la base real (las credenciales
+        # reales viven en Vercel y en el .env.local de cada desarrollador).
+        run: npm run build
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://dummy.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy-anon-key
+
+  # ------------------------------------------------------------------
+  # COMPUERTA: ci — resume el resultado de todas las etapas.
+  # Es el check obligatorio de la branch protection: queda verde solo si
+  # lint, test y build pasaron. Si cualquiera falla, este job falla y
+  # bloquea el merge a main.
+  # ------------------------------------------------------------------
+  ci:
+    name: ci
+    runs-on: ubuntu-latest
+    needs: [lint, test, build]
+    if: always()
+    steps:
+      - name: Verificar que todas las etapas pasaron
+        run: |
+          echo "lint=${{ needs.lint.result }}  test=${{ needs.test.result }}  build=${{ needs.build.result }}"
+          if [ "${{ needs.lint.result }}" != "success" ] || \
+             [ "${{ needs.test.result }}" != "success" ] || \
+             [ "${{ needs.build.result }}" != "success" ]; then
+            echo "::error::Alguna etapa del pipeline falló. El merge queda bloqueado."
+            exit 1
+          fi
+          echo "Todas las etapas pasaron. Pipeline en verde."
