@@ -11,3 +11,6 @@
 
 # Archivos del sistema
 .DS_Store
+
+# Cobertura de tests
+/coverage
