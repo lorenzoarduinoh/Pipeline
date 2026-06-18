@@ -24,7 +24,7 @@ de IC) y Vercel (entorno de entrega).
 | Repositorio de código | Repositorio Git subido a **GitHub** |
 | Servidor de IC | **GitHub Actions** con el workflow `.github/workflows/ci.yml` |
 | Entorno de desarrollador con build local | Cualquier PC con Node: `npm install`, `npm run dev`, `npm run test`, `npm run build` |
-| Prueba automatizada | `lib/validarMensaje.test.js` con **Vitest** (6 tests) |
+| Prueba automatizada | `lib/validarMensaje.test.js` con **Vitest** (9 tests) |
 | Build que despliega al entorno de entrega | **Vercel** conectado al repo: cada push a `main` que pasa el CI se despliega a producción |
 | Spec Driven Development (punto extra) | `specs/validacion-mensaje.md` → de ahí se generaron `lib/validarMensaje.js` y sus tests |
 
@@ -70,12 +70,21 @@ nombre de 51 caracteres. Los nombres de los tests citan textualmente la spec.
 Esto es lo que corre el servidor de IC en cada push.
 
 ### `.github/workflows/ci.yml` — el servidor de IC
-Le dice a GitHub Actions qué hacer en cada push o pull request a `main`:
-levantar una máquina Ubuntu con Node 20, instalar dependencias (`npm ci`),
-correr los tests (`npm run test`) y compilar (`npm run build`). Si cualquier
-paso falla, el commit queda marcado en rojo. El build usa valores *dummy* para
-las variables de Supabase porque Next.js necesita que existan para compilar,
-pero el CI nunca toca la base de datos real.
+Le dice a GitHub Actions qué hacer en cada push o pull request a `main`, en una
+máquina Ubuntu limpia con Node 20. Es un **pipeline en etapas**:
+- **`lint`** → `npm run lint` (ESLint, inspección estática del código).
+- **`test`** → `npm run test:coverage` (Vitest + cobertura; sube el reporte de
+  cobertura como **artefacto** descargable).
+- **`build`** → `npm run build` (compila la app; solo corre si `lint` y `test`
+  pasaron).
+- **`ci`** → la **compuerta**: depende de las tres etapas y queda en verde solo
+  si todas pasaron. Este job `ci` es el **check obligatorio** de la branch
+  protection de `main`: si una etapa falla, queda en rojo y **bloquea el merge**.
+
+`lint` y `test` corren en paralelo; si ambos pasan, recién ahí se hace el
+`build`. El build usa valores *dummy* para las variables de Supabase porque
+Next.js necesita que existan para compilar, pero el CI nunca toca la base de
+datos real.
 
 ### `supabase/setup.sql` — la base de datos
 El script que se ejecuta una vez en el SQL Editor de Supabase. Crea la tabla
@@ -98,13 +107,17 @@ borrar ni editar mensajes ajenos aunque tenga la clave anónima.
    localmente con `npm run dev` (la app corriendo), `npm run test` (los tests)
    y `npm run build` (la **build local**, que confirma que el proyecto compila
    antes de compartirlo).
-2. **Control de versiones**: hago `git commit` y `git push` a `main` en GitHub.
-   El repositorio es el punto de integración: todo el equipo integra su trabajo
-   ahí, varias veces al día.
-3. **Servidor de IC**: el push dispara automáticamente GitHub Actions, que en
-   una máquina limpia repite la verificación: instala dependencias, corre los
-   tests y hace el build. Esto detecta el clásico "en mi máquina anda": si solo
-   compila en mi PC por algo que olvidé commitear, acá falla.
+2. **Control de versiones**: el trabajo va en una **rama** y se propone con un
+   **Pull Request** hacia `main` en GitHub. La rama `main` está **protegida**:
+   nadie pushea directo, todo entra por un PR. El repositorio es el punto de
+   integración: todo el equipo integra su trabajo ahí, varias veces al día.
+3. **Servidor de IC**: cada push o PR dispara automáticamente GitHub Actions,
+   que en una máquina limpia repite la verificación como **pipeline en etapas**:
+   `lint` (ESLint) y `test` (Vitest con cobertura) en paralelo y, si pasan,
+   `build`. El job `ci` resume todo y es el **check obligatorio**: si una etapa
+   falla, queda en rojo y **bloquea el merge** a `main`. Esto detecta el clásico
+   "en mi máquina anda": si solo compila en mi PC por algo que olvidé
+   commitear, acá falla.
 4. **Despliegue al entorno de entrega**: Vercel está conectado al repositorio.
    Cada push a `main` genera un deploy automático a producción con las
    variables de entorno reales cargadas en Vercel.
@@ -185,9 +198,13 @@ spec → código → tests funciona cuando el negocio cambia.
 
 ## 6. Guion de presentación (5 minutos)
 
-**0:00 – 0:45 — El esquema.** Mostrar el slide: "Este es mi entorno de IC.
-El código vive en GitHub; cada push dispara GitHub Actions que corre tests y
-build; si pasa, Vercel despliega automáticamente a producción, donde la app usa
+> El guion **detallado** (qué tipear, qué mostrar y qué decir en cada momento)
+> está en `GUION-PRESENTACION.md`. Acá queda el resumen de los cinco bloques.
+
+**0:00 – 0:45 — El esquema.** Mostrar `esquema-pipeline.html`: "Este es mi
+entorno de IC. El código vive en GitHub; cada push o PR dispara GitHub Actions,
+que en una máquina limpia corre el pipeline en etapas (lint + tests + build);
+si pasa, Vercel despliega automáticamente a producción, donde la app usa
 Supabase como base de datos. El feedback son los checks de GitHub y el estado
 del deploy."
 
@@ -195,21 +212,22 @@ del deploy."
 mensaje en vivo y mostrar que aparece en la lista. "Esto es el entorno de
 entrega: lo que está acá pasó por todo el pipeline."
 
-**1:30 – 3:00 — Romper el pipeline.** Antes de la presentación, dejar
-preparado este cambio: en `lib/validarMensaje.js`, línea de la regla 4,
-cambiar `mensajeLimpio.length > 200` por `mensajeLimpio.length > 100`.
-Commitear ("simulo un error en una regla de negocio") y pushear. Mostrar en la
-pestaña Actions cómo el workflow corre y **falla en rojo**: el test "mensaje de
-exactamente 200 caracteres debe ser válido" no pasa. "El servidor de IC me
-protegió: este error nunca llegó a producción."
+**1:30 – 3:30 — Romper el pipeline (con PR y rama protegida).** En
+`lib/validarMensaje.js` (regla 4) cambiar `> 200` por `> 100`. Primero la
+**build local** ya avisa (`npm run test` falla 1 de 9). Subir el cambio en una
+**rama** y abrir un **Pull Request** hacia `main`. En el PR se ve: el check
+`CI` en **rojo** y marcado como **Required**, mientras Vercel deja su preview en
+verde (el bug compila, es de lógica) — y el botón **Merge bloqueado**. "El
+código roto vive en una rama; el check obligatorio impide que entre a `main` y,
+por lo tanto, a producción."
 
-**3:00 – 4:00 — Arreglar y deploy automático.** Revertir el cambio (volver a
-`> 200`), commitear ("fix: restaurar límite de 200 según la spec") y pushear.
-Mostrar el check verde y, en Vercel, el deploy automático en marcha. *(Tip: si
-los 60–90 segundos del workflow se hacen largos, tener una pestaña con una
-corrida verde anterior para mostrar mientras tanto.)*
+**3:30 – 4:20 — Arreglar, mergear y deploy automático.** Restaurar `> 200` en la
+misma rama (`npm run test` → 9 en verde), pushear: el check `CI` pasa a
+**verde** y el botón **Merge se habilita**. Mergear → Vercel dispara el deploy a
+**producción**. *(Tip: el CI tarda ~60–90s; tener una corrida verde anterior
+abierta para no quedar en silencio.)*
 
-**4:00 – 5:00 — Cierre con SDD.** Abrir `specs/validacion-mensaje.md` y al
+**4:20 – 5:00 — Cierre con SDD.** Abrir `specs/validacion-mensaje.md` y al
 lado `lib/validarMensaje.test.js`: "La validación no salió de mi cabeza al
 teclado: primero escribí esta especificación en español, y de ella se
 generaron el código y los tests — los nombres de los tests citan la spec
@@ -219,7 +237,7 @@ la spec."
 
 ---
 
-## 8. Posibles preguntas del profesor (y respuestas cortas)
+## 7. Posibles preguntas del profesor (y respuestas cortas)
 
 **1. ¿Qué es la Integración Continua?**
 Es la práctica de integrar el trabajo de todos los desarrolladores en un
@@ -280,7 +298,7 @@ CI). Eso permite que el repositorio sea público sin exponer accesos.
 
 ---
 
-## 9. Contenido sugerido para el slide
+## 8. Contenido sugerido para el slide
 
 **Título**: "Mi entorno de Integración y Entrega Continua"
 
