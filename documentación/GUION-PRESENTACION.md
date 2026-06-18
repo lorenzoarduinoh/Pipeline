@@ -255,6 +255,7 @@ git push
 # en el PR: CI verde + merge HABILITADO -> Merge -> deploy Production en Vercel
 
 # --- Volver a main local despues del merge ---
+git branch -d romper-regla
 git checkout main
 git pull
 ```
